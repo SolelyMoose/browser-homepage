@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home</title>
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    // Set theme before first paint to avoid a flash
+    (function () {
+      var h = new Date().getHours();
+      document.documentElement.dataset.theme = (h >= 19 || h < 7) ? 'dark' : 'light';
+    })();
+  </script>
+</head>
+<body>
+  <header class="top">
+    <div>
+      <p class="greeting" id="greeting">Hello</p>
+      <p class="date" id="date"></p>
+    </div>
+    <p class="clock" id="clock">--:--</p>
+  </header>
+
+  <main class="grid">
+    <!-- Daily to-do -->
+    <section class="card" id="todo-card">
+      <div class="card-head">
+        <h2>Today</h2>
+        <div class="mini-progress">
+          <span class="count" id="todo-count">0/0</span>
+          <div class="bar mini"><div class="fill" id="todo-fill"></div></div>
+        </div>
+      </div>
+      <form class="add-row" id="todo-form" autocomplete="off">
+        <input id="todo-input" type="text" placeholder="Add a task for today…" maxlength="200">
+        <button type="submit" aria-label="Add task">Add</button>
+      </form>
+      <ul class="list" id="todo-list"></ul>
+      <p class="empty" id="todo-empty">Nothing planned yet.</p>
+    </section>
+
+    <!-- Homework -->
+    <section class="card" id="hw-card">
+      <div class="card-head">
+        <h2>Homework</h2>
+        <div class="head-actions">
+          <button class="link-btn" id="hw-clear" type="button">Clear completed</button>
+          <button class="link-btn" id="tx-toggle" type="button">Export / Import</button>
+        </div>
+      </div>
+      <div class="big-progress">
+        <div class="bar"><div class="fill" id="hw-fill"></div></div>
+        <span class="percent" id="hw-percent">0%</span>
+      </div>
+      <form class="add-row" id="hw-form" autocomplete="off">
+        <input id="hw-title" type="text" placeholder="Assignment" maxlength="200">
+        <input id="hw-subject" class="subject-input" type="text" placeholder="Subject" maxlength="40">
+        <button type="submit" aria-label="Add assignment">Add</button>
+      </form>
+      <ul class="list" id="hw-list"></ul>
+      <p class="empty" id="hw-empty">No homework — nice.</p>
+    </section>
+
+    <!-- Deadline -->
+    <section class="card" id="deadline-card">
+      <div class="card-head">
+        <h2>Deadline</h2>
+      </div>
+      <div class="countdown" id="countdown" data-state="none">
+        <p class="cd-label" id="cd-label">No deadline set</p>
+        <div class="cd-units" id="cd-units">
+          <div><span id="cd-d">0</span><small>days</small></div>
+          <div><span id="cd-h">00</span><small>hrs</small></div>
+          <div><span id="cd-m">00</span><small>min</small></div>
+          <div><span id="cd-s">00</span><small>sec</small></div>
+        </div>
+        <p class="cd-due" id="cd-due"></p>
+      </div>
+      <form class="deadline-form" id="deadline-form" autocomplete="off">
+        <input id="dl-label" type="text" placeholder="What's due? (e.g. All homework)" maxlength="80">
+        <input id="dl-date" type="datetime-local" required>
+        <div class="row">
+          <button type="submit">Save</button>
+          <button type="button" class="secondary" id="dl-clear">Clear</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <!-- Export / import homework + deadline as plain text -->
+  <section class="card transfer" id="transfer" hidden>
+    <div class="card-head">
+      <h2>Export / Import</h2>
+      <button class="link-btn" id="tx-close" type="button">Close</button>
+    </div>
+    <p class="hint">
+      This is your homework and deadline as plain text. Copy or download it to save it.
+      To import, paste or edit text here and press <strong>Import</strong>. Import replaces
+      your homework list and deadline with what's in the text.
+    </p>
+    <textarea id="tx-text" spellcheck="false" rows="10"></textarea>
+    <div class="row tx-actions">
+      <button type="button" id="tx-import">Import</button>
+      <button type="button" class="secondary" id="tx-copy">Copy</button>
+      <button type="button" class="secondary" id="tx-download">Download .txt</button>
+      <button type="button" class="secondary" id="tx-open">Open .txt file…</button>
+      <button type="button" class="secondary" id="tx-refresh">Reset to current</button>
+      <input type="file" id="tx-file" accept=".txt,text/plain" hidden>
+    </div>
+    <p class="tx-status" id="tx-status" role="status"></p>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

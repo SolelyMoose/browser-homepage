@@ -12,6 +12,8 @@
   --urgent: #d64545;
   --input-bg: #faf8f4;
   --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+  --gem: #8a4fd8;
+  --gem-soft: #efe6fb;
 }
 
 :root[data-theme="dark"] {
@@ -28,6 +30,8 @@
   --urgent: #ff6b6b;
   --input-bg: #141820;
   --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  --gem: #c39bff;
+  --gem-soft: #2c2440;
 }
 
 * { box-sizing: border-box; }
@@ -63,6 +67,225 @@ body {
   font-weight: 300;
   font-variant-numeric: tabular-nums;
   letter-spacing: -.02em;
+}
+
+/* Player: level, XP, gems */
+.player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px 6px 6px;
+  box-shadow: var(--shadow);
+  position: relative;
+  transition: background-color .6s ease, border-color .6s ease, transform .35s cubic-bezier(.3,1.4,.5,1), box-shadow .35s ease;
+}
+/* While the last bit of XP fills in before a level-up */
+.player.charging {
+  z-index: 2;
+  transform: scale(1.35);
+  box-shadow: 0 0 0 4px var(--accent-soft), 0 0 24px rgba(76, 157, 255, .45), var(--shadow);
+}
+.player.charging .xp .bar { height: 10px; }
+.player.charging .fill { box-shadow: 0 0 10px #4c9dff; }
+.player.charging .xp-text { color: var(--accent); font-weight: 700; }
+.player.leveled { animation: level-pop .6s ease; }
+@keyframes level-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.08); box-shadow: 0 0 0 6px var(--accent-soft), var(--shadow); }
+  100% { transform: scale(1); }
+}
+.lvl {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+:root[data-theme="dark"] .lvl { color: #0f1320; }
+.xp { display: flex; flex-direction: column; gap: 3px; width: 140px; }
+.xp .bar { height: 6px; flex: none; transition: height .35s ease; }
+.xp-text { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.gems {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--gem);
+  background: var(--gem-soft);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translate(-50%, 20px);
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.big { font-size: 17px; padding: 12px 24px; color: var(--gem); border-color: var(--gem); }
+
+/* Level-up effects */
+.gems.bump { animation: gem-bump .3s ease; }
+@keyframes gem-bump {
+  40% { transform: scale(1.25); box-shadow: 0 0 0 4px var(--gem-soft), 0 0 14px var(--gem); }
+}
+
+/* Rumble that builds up before the level-up (length must match RUMBLE_MS in app.js) */
+body.rumbling > .top, body.rumbling > .grid, body.rumbling > .transfer { animation: rumble 1.4s linear; }
+@keyframes rumble {
+  0%, 100% { transform: translate(0, 0); }
+  5% { transform: translate(-1px, 1px); }
+  10% { transform: translate(1px, -1px); }
+  15% { transform: translate(-1px, -1px); }
+  20% { transform: translate(2px, 1px); }
+  25% { transform: translate(-2px, 1px); }
+  30% { transform: translate(2px, -2px); }
+  35% { transform: translate(-2px, -1px); }
+  40% { transform: translate(3px, 2px); }
+  45% { transform: translate(-3px, -2px); }
+  50% { transform: translate(3px, -2px); }
+  55% { transform: translate(-4px, 2px); }
+  60% { transform: translate(4px, 1px); }
+  65% { transform: translate(-4px, -3px); }
+  70% { transform: translate(5px, 2px) rotate(.15deg); }
+  75% { transform: translate(-5px, -2px) rotate(-.15deg); }
+  80% { transform: translate(5px, -3px) rotate(.2deg); }
+  85% { transform: translate(-6px, 3px) rotate(-.2deg); }
+  90% { transform: translate(6px, 2px) rotate(.2deg); }
+  95% { transform: translate(-6px, -3px) rotate(-.2deg); }
+}
+
+body.shaking > .top, body.shaking > .grid, body.shaking > .transfer { animation: shake .55s linear; }
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-9px, 5px) rotate(-.4deg); }
+  20% { transform: translate(8px, -6px) rotate(.4deg); }
+  30% { transform: translate(-7px, -4px); }
+  40% { transform: translate(7px, 5px) rotate(.3deg); }
+  50% { transform: translate(-5px, 3px); }
+  60% { transform: translate(4px, -3px); }
+  75% { transform: translate(-2px, 2px); }
+  90% { transform: translate(1px, -1px); }
+}
+
+.fx {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  visibility: hidden;
+  overflow: hidden;
+}
+.fx.on { visibility: visible; }
+.fx-dim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 100%, rgba(60, 140, 255, .45), rgba(8, 14, 30, .55) 70%);
+  opacity: 0;
+}
+.fx.on .fx-dim { animation: fx-dim 2.8s ease forwards; }
+@keyframes fx-dim {
+  0% { opacity: 0; }
+  6% { opacity: 1; }
+  12%, 80% { opacity: .75; }
+  100% { opacity: 0; }
+}
+.fx-beam {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 220px;
+  height: 100%;
+  transform: translateX(-50%) scaleY(0);
+  transform-origin: bottom;
+  background: linear-gradient(to top, rgba(120, 190, 255, .9), rgba(60, 130, 255, .35) 45%, transparent 75%);
+  filter: blur(18px);
+}
+.fx.on .fx-beam { animation: fx-beam 1.1s ease-out forwards; }
+@keyframes fx-beam {
+  0% { transform: translateX(-50%) scaleY(0); opacity: 1; }
+  25% { transform: translateX(-50%) scaleY(1); opacity: 1; }
+  100% { transform: translateX(-50%) scaleY(1); opacity: 0; }
+}
+.bolt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  filter: drop-shadow(0 0 6px #4c9dff) drop-shadow(0 0 18px #1f6bff);
+}
+.bolt path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.bolt .glow { stroke: #6fb6ff; stroke-width: 8; opacity: .7; }
+.bolt .core { stroke: #eef7ff; stroke-width: 3; }
+/* One bolt that slowly widens, then fades */
+.fx.on .bolt { animation: bolt 2.4s ease-out forwards; }
+.fx.on .bolt .glow { animation: bolt-glow 2.4s cubic-bezier(.2,.6,.3,1) forwards; }
+.fx.on .bolt .core { animation: bolt-core 2.4s cubic-bezier(.2,.6,.3,1) forwards; }
+@keyframes bolt {
+  0% { opacity: 0; }
+  6%, 65% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes bolt-glow { to { stroke-width: 56; } }
+@keyframes bolt-core { to { stroke-width: 20; } }
+.lvl-pop {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #fff;
+  opacity: 0;
+  text-shadow: 0 0 10px #4c9dff, 0 0 28px #1f6bff, 0 2px 0 rgba(0, 0, 0, .25);
+}
+.fx.on .lvl-pop { animation: lvl-pop 2.8s ease forwards; }
+@keyframes lvl-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.5); }
+  10% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  18%, 82% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
+}
+.lvl-pop small {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .35em;
+  text-transform: uppercase;
+  margin-left: .35em;
+}
+.lvl-pop span {
+  display: block;
+  font-size: 128px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.lvl-pop span.bump { animation: num-bump .35s ease; }
+@keyframes num-bump {
+  40% { transform: scale(1.35); color: #cfe6ff; }
+}
+.fly-gem {
+  position: fixed;
+  z-index: 60;
+  font-size: 28px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px rgba(160, 110, 255, .9));
 }
 
 /* Grid */

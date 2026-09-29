@@ -7,6 +7,7 @@ No build step or dependencies. Everything is saved in your browser's `localStora
 ## Features
 - **Today**: tasks with a small progress bar. Tasks stay until you delete them with the × button.
 - **Homework**: assignments with an optional subject tag and a progress bar. Use "Clear completed" to remove finished ones.
+- **XP, levels and gems**: checking off a to-do gives 10 XP, and checking off homework gives 25 XP. Each item gives XP only once, so unchecking it and checking it again gives nothing. Level 2 takes 100 XP, and each level after that needs 50 XP more than the one before. Every level-up gives 10 💎, and every 5th level gives 50 💎.
 - **Deadline**: one deadline with a live countdown. It turns amber when less than 24 hours are left, red under 3 hours, and shows "Past due" once it has passed.
 
 ## Export / import

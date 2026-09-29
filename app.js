@@ -54,6 +54,229 @@
     return pct;
   }
 
+  // ---------- XP / levels / gems ----------
+  // Checking off an item gives XP once per item (the item gets a `rewarded` flag),
+  // so unchecking and re-checking can't farm XP. Each level-up gives gems.
+  var XP_TODO = 10;
+  var XP_HOMEWORK = 25;
+  var player = load('hp.player', { xp: 0, gems: 0 });
+  var shownGems = player.gems; // lags behind player.gems while gems fly in
+
+  // XP needed to go from `level` to `level + 1`: 100, 150, 200, ...
+  function xpForLevel(level) { return 50 + level * 50; }
+  // Every 5th level is a bigger gem reward
+  function gemsForLevel(level) { return level % 5 === 0 ? 50 : 10; }
+
+  function levelInfo(xp) {
+    var level = 1;
+    while (xp >= xpForLevel(level)) { xp -= xpForLevel(level); level++; }
+    return { level: level, into: xp, need: xpForLevel(level) };
+  }
+
+  function renderPlayer() {
+    var info = levelInfo(player.xp);
+    $('lvl').textContent = 'Lv ' + info.level;
+    $('xp-text').textContent = info.into + ' / ' + info.need + ' XP';
+    $('xp-fill').style.width = Math.round((info.into / info.need) * 100) + '%';
+    $('gems').textContent = '💎 ' + shownGems;
+  }
+
+  var toastTimer;
+  function toast(msg, big) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.toggle('big', !!big);
+    el.classList.remove('show');
+    void el.offsetWidth; // restart the animation
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, big ? 3000 : 1500);
+  }
+
+  function gainXp(amount) {
+    var start = levelInfo(player.xp);
+    player.xp += amount;
+    var after = levelInfo(player.xp).level;
+    var gems = 0;
+    for (var l = start.level + 1; l <= after; l++) gems += gemsForLevel(l);
+    player.gems += gems;
+    save('hp.player', player);
+    if (after > start.level) {
+      levelUpFx(start, after, gems);
+    } else {
+      renderPlayer();
+      toast('+' + amount + ' XP');
+    }
+  }
+
+  function restartClass(el, cls) {
+    el.classList.remove(cls);
+    void el.offsetWidth; // restart the CSS animation
+    el.classList.add(cls);
+  }
+
+  // ---------- Level-up effects ----------
+  // Screen shake, a blue lightning bolt from the bottom, a big level counter that
+  // counts up, then gems that fly into the header gem counter. The header shows
+  // `shownGems`, which catches up to `player.gems` as each gem lands.
+  function reduceMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  var fxTimer, rumbleTimer, chargeFrame;
+  var RUMBLE_MS = 1400; // keep in sync with the body.rumbling animation in styles.css
+  var CHARGE_MS = 1200; // XP bar fill; ends a little before the rumble so it holds at full
+
+  // `start` is levelInfo() from before the XP was added. The XP bar grows and fills
+  // up to max while the screen rumbles, then the big effect plays.
+  function levelUpFx(start, to, gems) {
+    if (reduceMotion()) {
+      shownGems = player.gems;
+      renderPlayer();
+      restartClass($('player'), 'leveled');
+      toast('Level up! Lv ' + to + ' · +' + gems + ' 💎', true);
+      return;
+    }
+    chargeBar(start);
+    document.body.classList.remove('shaking');
+    restartClass(document.body, 'rumbling');
+    clearTimeout(rumbleTimer);
+    rumbleTimer = setTimeout(function () {
+      document.body.classList.remove('rumbling');
+      releaseBar();
+      playLevelUp(start.level, to, gems);
+    }, RUMBLE_MS);
+  }
+
+  // Enlarge the XP bar and tween it (and the XP text) from where it was to full
+  function chargeBar(start) {
+    var fill = $('xp-fill'), text = $('xp-text');
+    $('lvl').textContent = 'Lv ' + start.level;
+    $('player').classList.add('charging');
+    fill.style.transition = 'none';
+    cancelAnimationFrame(chargeFrame);
+    var t0 = performance.now();
+    (function frame(now) {
+      var p = Math.min(1, (now - t0) / CHARGE_MS);
+      var e = p < 0.5 ? 2 * p * p : 1 - Math.pow(2 - 2 * p, 2) / 2; // ease in-out
+      var xp = start.into + (start.need - start.into) * e;
+      fill.style.width = (xp / start.need) * 100 + '%';
+      text.textContent = Math.round(xp) + ' / ' + start.need + ' XP';
+      if (p < 1) chargeFrame = requestAnimationFrame(frame);
+    })(t0);
+  }
+
+  // Shrink the bar back and refill it from empty for the new level
+  function releaseBar() {
+    cancelAnimationFrame(chargeFrame);
+    var fill = $('xp-fill');
+    $('player').classList.remove('charging');
+    fill.style.width = '0%';
+    void fill.offsetWidth;
+    fill.style.transition = '';
+    renderPlayer();
+  }
+
+  function playLevelUp(from, to, gems) {
+    var fx = $('fx');
+    var num = $('lvl-pop-num');
+    num.textContent = from;
+    restartClass(fx, 'on');
+    restartClass(document.body, 'shaking');
+    lightning();
+
+    var level = from;
+    (function step() {
+      setTimeout(function () {
+        level++;
+        num.textContent = level;
+        restartClass(num, 'bump');
+        if (level < to) step();
+        else burstGems(gems);
+      }, level === from ? 450 : 300);
+    })();
+
+    clearTimeout(fxTimer);
+    fxTimer = setTimeout(function () {
+      fx.classList.remove('on');
+      document.body.classList.remove('shaking');
+    }, 2800 + (to - from - 1) * 300);
+  }
+
+  // Replay the effect from the console without earning anything
+  // (the gem counter can't go above player.gems).
+  window.previewLevelUp = function () {
+    var info = levelInfo(player.xp);
+    levelUpFx(info, info.level + 1, 10);
+  };
+
+  // One big zigzag bolt from the bottom of the screen up to the level counter.
+  // It's drawn once; CSS (.fx.on .bolt) slowly widens its strokes, then fades it.
+  function lightning() {
+    var svg = $('bolt');
+    var w = window.innerWidth, h = window.innerHeight;
+    svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    var cx = w / 2, yEnd = $('lvl-pop').getBoundingClientRect().bottom - 10;
+    var y = h + 10, side = Math.random() < 0.5 ? -1 : 1;
+    var d = 'M' + cx + ' ' + y;
+    while (y > yEnd) {
+      y = Math.max(yEnd, y - (70 + Math.random() * 50));
+      side = -side;
+      var x = y === yEnd ? cx : cx + side * (25 + Math.random() * 35);
+      d += ' L' + x.toFixed(1) + ' ' + y.toFixed(1);
+    }
+    svg.querySelectorAll('path').forEach(function (p) { p.setAttribute('d', d); });
+  }
+
+  function burstGems(total) {
+    var target = $('gems').getBoundingClientRect();
+    var src = $('lvl-pop').getBoundingClientRect();
+    var sx = src.left + src.width / 2, sy = src.top + src.height / 2;
+    var dx = target.left + target.width / 2 - sx, dy = target.top + target.height / 2 - sy;
+    var count = Math.min(total, 12);
+    var base = Math.floor(total / count), extra = total % count;
+
+    for (var i = 0; i < count; i++) {
+      flyGem(i, count, base + (i < extra ? 1 : 0));
+    }
+
+    function flyGem(i, count, value) {
+      var gem = document.createElement('span');
+      gem.className = 'fly-gem';
+      gem.textContent = '💎';
+      gem.style.left = sx + 'px';
+      gem.style.top = sy + 'px';
+      document.body.append(gem);
+
+      var angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+      var r = 90 + Math.random() * 70;
+      var out = 'translate(calc(-50% + ' + Math.cos(angle) * r + 'px), calc(-50% + ' + Math.sin(angle) * r + 'px)) scale(1.2)';
+      var home = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(.5)';
+
+      gem.animate([
+        { transform: 'translate(-50%, -50%) scale(.3)', opacity: 0 },
+        { transform: out, opacity: 1 }
+      ], { duration: 380, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' }).onfinish = function () {
+        gem.animate([{ transform: out }, { transform: home }], {
+          duration: 550, delay: 120 + i * 60, easing: 'cubic-bezier(.55,0,.8,.45)', fill: 'forwards'
+        }).onfinish = function () {
+          gem.remove();
+          shownGems = Math.min(player.gems, shownGems + value);
+          $('gems').textContent = '💎 ' + shownGems;
+          restartClass($('gems'), 'bump');
+        };
+      };
+    }
+  }
+
+  function toggleDone(item, xp) {
+    item.done = !item.done;
+    if (item.done && !item.rewarded) {
+      item.rewarded = true;
+      gainXp(xp);
+    }
+  }
+
   function makeItem(item, onToggle, onDelete, tagText) {
     var li = document.createElement('li');
     if (item.done) li.className = 'done';
@@ -93,7 +316,7 @@
     list.textContent = '';
     todos.items.forEach(function (t) {
       list.append(makeItem(t,
-        function () { t.done = !t.done; save('hp.todos', todos); renderTodos(); },
+        function () { toggleDone(t, XP_TODO); save('hp.todos', todos); renderTodos(); },
         function () { todos.items = todos.items.filter(function (x) { return x.id !== t.id; }); save('hp.todos', todos); renderTodos(); }
       ));
     });
@@ -123,7 +346,7 @@
     list.textContent = '';
     homework.forEach(function (h) {
       list.append(makeItem(h,
-        function () { h.done = !h.done; save('hp.homework', homework); renderHomework(); },
+        function () { toggleDone(h, XP_HOMEWORK); save('hp.homework', homework); renderHomework(); },
         function () { homework = homework.filter(function (x) { return x.id !== h.id; }); save('hp.homework', homework); renderHomework(); },
         h.subject
       ));
@@ -374,6 +597,7 @@
   });
 
   // ---------- Init ----------
+  renderPlayer();
   renderTodos();
   renderHomework();
   fillDeadlineForm();

@@ -19,6 +19,14 @@
       <p class="greeting" id="greeting">Hello</p>
       <p class="date" id="date"></p>
     </div>
+    <div class="player" id="player">
+      <span class="lvl" id="lvl">Lv 1</span>
+      <div class="xp">
+        <div class="bar"><div class="fill" id="xp-fill"></div></div>
+        <span class="xp-text" id="xp-text">0 / 100 XP</span>
+      </div>
+      <span class="gems" id="gems" title="Gems">💎 0</span>
+    </div>
     <p class="clock" id="clock">--:--</p>
   </header>
 
@@ -110,6 +118,19 @@
     </div>
     <p class="tx-status" id="tx-status" role="status"></p>
   </section>
+
+  <!-- Level-up effects overlay -->
+  <div class="fx" id="fx" aria-hidden="true">
+    <div class="fx-dim"></div>
+    <div class="fx-beam"></div>
+    <svg class="bolt" id="bolt" preserveAspectRatio="none">
+      <path class="glow" d=""></path>
+      <path class="core" d=""></path>
+    </svg>
+    <div class="lvl-pop" id="lvl-pop"><small>Level</small><span id="lvl-pop-num">1</span></div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>

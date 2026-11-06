@@ -596,7 +596,23 @@
     this.value = '';
   });
 
+  // ---------- More (⋯) section ----------
+  var moreOpen = load('hp.more', false);
+
+  function renderMore() {
+    $('more').hidden = !moreOpen;
+    $('more-toggle').setAttribute('aria-expanded', String(moreOpen));
+  }
+
+  $('more-toggle').addEventListener('click', function () {
+    moreOpen = !moreOpen;
+    save('hp.more', moreOpen);
+    renderMore();
+    if (moreOpen) $('more').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
   // ---------- Init ----------
+  renderMore();
   renderPlayer();
   renderTodos();
   renderHomework();

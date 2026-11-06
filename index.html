@@ -119,6 +119,120 @@
     <p class="tx-status" id="tx-status" role="status"></p>
   </section>
 
+  <!-- More: shown/hidden with the ⋯ button -->
+  <div class="more-toggle">
+    <button class="dots-btn ghost" id="more-toggle" type="button" aria-expanded="false" aria-controls="more" title="More">⋯</button>
+  </div>
+
+  <section class="more" id="more" hidden>
+    <div class="card math">
+      <div class="card-head">
+        <h2>Math practice</h2>
+        <div class="j-status">
+          <span class="combo" id="m-combo" hidden></span>
+          <span class="count" id="m-score"></span>
+          <button class="link-btn sfx-toggle" type="button"></button>
+        </div>
+      </div>
+      <div class="math-grid">
+        <div class="m-main" id="m-main">
+          <p class="m-mode" id="m-mode"></p>
+          <p class="m-question" id="m-question"></p>
+          <form id="m-form" autocomplete="off">
+            <div class="m-fields" id="m-fields"></div>
+            <div class="m-keys" id="m-keys" aria-label="Insert symbol">
+              <button type="button" class="key ghost">√</button>
+              <button type="button" class="key ghost">π</button>
+              <button type="button" class="key ghost">^</button>
+              <button type="button" class="key ghost" data-sym="^2">x²</button>
+              <button type="button" class="key ghost">≤</button>
+              <button type="button" class="key ghost">≥</button>
+            </div>
+            <p class="m-hint" id="m-hint" role="status"></p>
+            <div class="m-actions">
+              <button type="submit" id="m-check">Check</button>
+              <button type="button" class="secondary" id="m-idk">I don't know</button>
+              <button type="submit" id="m-next" hidden>Next →</button>
+            </div>
+          </form>
+          <div class="m-feedback" id="m-feedback" role="status" hidden></div>
+        </div>
+        <aside class="m-side">
+          <div class="card-head">
+            <h3>Needs practice</h3>
+            <button class="link-btn" id="m-weak" type="button" hidden>Practice these</button>
+          </div>
+          <ul class="list" id="m-needs"></ul>
+          <p class="empty" id="m-needs-empty">Nothing yet. Topics you miss or skip show up here. Get one right 3 times in a row to clear it.</p>
+        </aside>
+      </div>
+      <div class="m-topics">
+        <div class="card-head">
+          <h3>Topics <span class="count" id="m-topic-count"></span></h3>
+          <button class="secondary" id="m-all" type="button">Review all</button>
+        </div>
+        <div class="m-groups" id="m-topic-list"></div>
+      </div>
+    </div>
+
+    <!-- Study: timed practice with a mastery score per question type -->
+    <div class="card study">
+      <div class="card-head">
+        <h2>Study: Geometry</h2>
+        <div class="j-status">
+          <span class="combo" id="s-combo" hidden></span>
+          <div class="mini-progress" title="Average mastery across every question type">
+            <span class="count" id="s-overall">0% mastery</span>
+            <div class="bar mini"><div class="fill" id="s-overall-fill"></div></div>
+          </div>
+          <button class="link-btn sfx-toggle" type="button"></button>
+        </div>
+      </div>
+
+      <div class="s-idle" id="s-idle">
+        <p class="hint" id="s-summary" role="status"></p>
+        <button type="button" id="s-start">Start practicing</button>
+      </div>
+
+      <div class="s-session" id="s-session" hidden>
+        <div class="s-status">
+          <span class="s-topic" id="s-topic"></span>
+          <span class="count" id="s-score"></span>
+          <span class="s-timer" id="s-timer" title="Time on this question. It pauses while this tab is hidden.">0:00</span>
+          <button class="link-btn" id="s-end" type="button">End</button>
+        </div>
+        <div class="s-par" title="Time left to beat the goal"><div class="s-par-fill" id="s-par-fill"></div></div>
+        <p class="m-question" id="s-question"></p>
+        <form id="s-form" autocomplete="off">
+          <div class="m-fields" id="s-fields"></div>
+          <div class="m-keys" id="s-keys" aria-label="Insert symbol">
+            <button type="button" class="key ghost">√</button>
+            <button type="button" class="key ghost">π</button>
+            <button type="button" class="key ghost">^</button>
+          </div>
+          <p class="m-hint" id="s-hint" role="status"></p>
+          <div class="m-actions">
+            <button type="submit" id="s-check">Check</button>
+            <button type="button" class="secondary" id="s-idk">I don't know</button>
+            <button type="submit" id="s-next" hidden>Next →</button>
+          </div>
+        </form>
+        <div class="m-feedback" id="s-feedback" role="status" hidden></div>
+      </div>
+
+      <div class="s-topics">
+        <div class="card-head">
+          <h3>Question types <span class="count" id="s-count"></span></h3>
+          <div class="head-actions">
+            <button class="link-btn" id="s-all" type="button">Select all</button>
+            <button class="link-btn" id="s-none" type="button">Select none</button>
+          </div>
+        </div>
+        <div class="s-list" id="s-list"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- Level-up effects overlay -->
   <div class="fx" id="fx" aria-hidden="true">
     <div class="fx-dim"></div>
@@ -133,5 +247,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="app.js"></script>
+  <script src="juice.js"></script>
+  <script src="math.js"></script>
+  <script src="study.js"></script>
 </body>
 </html>

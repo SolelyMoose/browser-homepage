@@ -651,12 +651,30 @@
     shake(timer, 4);
   }
 
-  function mastered(from) {
+  function celebrate(from, text) {
     var c = centre(from);
     sfx('fanfare');
     fireworks(6);
-    floatText(c.x, c.y - 30, 'Mastered!', cssVar('--done'), 46);
+    floatText(c.x, c.y - 30, text, cssVar('--done'), 46);
     ring(c.x, c.y, cssVar('--done'), 260);
+  }
+  function mastered(from) { celebrate(from, 'Mastered!'); }
+
+  // Math goals. These wait like needs() does, so they land after the answer's own effects.
+  function goalDone(from) { setTimeout(function () { celebrate(from, 'Goal complete!'); }, 420); }
+  function goalStep(el, quiet) {
+    setTimeout(function () {
+      if (!quiet) sfx('needClear');
+      bump(el, 1.15);
+      glow(el, cssVar('--done'), 12);
+    }, 420);
+  }
+  function dayDone(el) {
+    setTimeout(function () {
+      sfx('milestone', 3);
+      bump(el, 1.15);
+      glow(el, cssVar('--warn'), 14);
+    }, 420);
   }
 
   // A bar that climbs (or drops) from one mastery value to the other, ticking as
@@ -795,6 +813,6 @@
   window.hpJuice = {
     sfx: sfx, question: question, answer: answer, retry: retry, step: step, stepsDone: stepsDone,
     flip: flip, needs: needs, start: start, end: end, fast: fast, parCountdown: parCountdown,
-    overPar: overPar, meter: meter, SOUNDS: SOUNDS
+    overPar: overPar, meter: meter, goalDone: goalDone, goalStep: goalStep, dayDone: dayDone, SOUNDS: SOUNDS
   };
 })();

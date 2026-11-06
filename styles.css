@@ -612,11 +612,47 @@ button.secondary { background: var(--accent-soft); color: var(--text); }
   background: var(--urgent);
   vertical-align: middle;
 }
+.chip.solid::before { content: '✓ '; color: var(--done); font-weight: 700; }
 .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip.active::before { color: inherit; }
 :root[data-theme="dark"] .chip.active { color: #0f1320; }
-#m-all.active, #m-weak.active { outline: 2px solid var(--accent); outline-offset: 1px; }
+#m-all.active, #m-weak.active, #m-goal-go.active { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Math goals */
+.m-goals {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px 24px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.m-goal-top { display: flex; align-items: center; gap: 8px; min-height: 22px; }
+.m-goal-top .count { margin-left: auto; }
+.m-goal-kicker {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+}
+.tag.m-reward { background: var(--gem-soft); color: var(--gem); }
+.tag.m-reward[hidden] { display: none; }
+.card .m-goal-name { margin: 4px 0 8px; font-size: 20px; font-weight: 700; }
+.m-goals .big-progress { margin-bottom: 8px; }
+.m-goal-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.m-goal-foot button[hidden] { display: none; }
+.m-goal-next { margin: 0; flex: 1 1 200px; font-size: 13px; color: var(--muted); }
+.m-goal-day { border-left: 1px solid var(--border); padding-left: 24px; min-width: 0; }
+.m-day-text { margin: 4px 0 8px; font-size: 20px; font-weight: 700; }
+.m-day-streak { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--warn); }
+.m-day-streak[hidden] { display: none; }
+.m-goal-list { grid-column: 1 / -1; }
+.m-goal-list .chip:disabled { cursor: default; color: var(--done); filter: none; }
+
 @media (max-width: 900px) {
-  .math-grid { grid-template-columns: 1fr; }
+  .math-grid, .m-goals { grid-template-columns: 1fr; }
+  .m-goal-day { border-left: none; padding-left: 0; }
   .m-side { border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 16px; }
 }
 

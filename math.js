@@ -931,21 +931,108 @@
   }
 
   // ---------- State ----------
-  // hp.math: { needs: [{ id, misses, streak }] (most recently missed first), mode }
-  // mode: 'all' (every topic), 'needs' (only Needs practice), or one topic id.
+  // hp.math: { needs: [{ id, misses, streak }] (most recently missed first), mode,
+  //            solid: [ids], runs: { id: right in a row }, goal: group name,
+  //            daily: { date, right, streak, last } }
+  // mode: 'all' (every topic), 'needs' (only Needs practice), 'goal' (the main goal's
+  // unfinished topics), or one topic id.
   var CLEAR_STREAK = 3;
+  var SOLID_STREAK = 3;   // right in a row, across sessions, to make a topic solid
+  var XP_PER_TOPIC = 20;  // a main goal pays this for each of its topics
+  var DAILY_GOAL = 10;    // right answers per day
+  var DAILY_XP = 30;
   var byId = {};
   TOPICS.forEach(function (t) { byId[t.id] = t; });
 
   var state = load('hp.math', { needs: [], mode: 'all' });
   state.needs = (state.needs || []).filter(function (n) { return byId[n.id]; });
-  if (state.mode !== 'all' && state.mode !== 'needs' && !byId[state.mode]) state.mode = 'all';
+  if (state.mode !== 'all' && state.mode !== 'needs' && state.mode !== 'goal' && !byId[state.mode]) state.mode = 'all';
+  state.solid = (state.solid || []).filter(function (id) { return byId[id]; });
+  state.runs = state.runs || {};
+  state.daily = state.daily || { date: '', right: 0, streak: 0, last: '' };
+
+  // One main goal per group, in the order the groups appear in TOPICS
+  var GOALS = [];
+  TOPICS.forEach(function (t) {
+    var g = GOALS.filter(function (x) { return x.name === t.group; })[0];
+    if (!g) { g = { name: t.group, topics: [] }; GOALS.push(g); }
+    g.topics.push(t);
+  });
 
   var current = null, lastTopic = null, answered = false, lastInput = null;
   var score = { right: 0, total: 0 };
 
   function findNeed(id) { return state.needs.filter(function (n) { return n.id === id; })[0]; }
   function removeNeed(id) { state.needs = state.needs.filter(function (n) { return n.id !== id; }); }
+
+  // ---------- Goals ----------
+  // Solid is permanent: a later miss sends the topic to Needs practice but doesn't
+  // undo goal progress. A goal is done when all its topics are solid, which happens
+  // only once, so its reward can't be earned twice and nothing else needs storing.
+  function isSolid(id) { return state.solid.indexOf(id) >= 0; }
+  function unsolid(g) { return g.topics.filter(function (t) { return !isSolid(t.id); }); }
+  function goalOf(id) { return GOALS.filter(function (g) { return g.name === byId[id].group; })[0]; }
+  function goalXp(g) { return g.topics.length * XP_PER_TOPIC; }
+
+  // The chosen goal, or the first unfinished one once that's done
+  function mainGoal() {
+    var open = GOALS.filter(function (g) { return unsolid(g).length; });
+    return open.filter(function (g) { return g.name === state.goal; })[0] || open[0] || null;
+  }
+
+  function rollDay() {
+    var today = window.hpPlayer.todayKey();
+    if (state.daily.date !== today) { state.daily.date = today; state.daily.right = 0; }
+  }
+  function yesterday() {
+    var d = new Date();
+    d.setDate(d.getDate() - 1);
+    return window.hpPlayer.todayKey(d);
+  }
+  // A streak survives until a full day goes by without reaching the daily goal
+  function dayStreak() {
+    var d = state.daily;
+    return d.last === d.date || d.last === yesterday() ? d.streak : 0;
+  }
+
+  // Updates goal state for one answer. quiet leaves out the "n of 3" progress note.
+  function trackGoals(id, ok, quiet) {
+    var r = { notes: [], solid: false, goal: null, day: false, xp: 0 };
+    rollDay();
+    if (!ok) {
+      delete state.runs[id];
+      return r;
+    }
+    var d = state.daily;
+    d.right++;
+    if (d.right === DAILY_GOAL) {
+      d.streak = dayStreak() + 1;
+      d.last = d.date;
+      r.day = true;
+      r.xp += DAILY_XP;
+    }
+    if (!isSolid(id)) {
+      var run = (state.runs[id] || 0) + 1;
+      if (run >= SOLID_STREAK) {
+        delete state.runs[id];
+        state.solid.push(id);
+        r.solid = true;
+        var g = goalOf(id);
+        if (!unsolid(g).length) {
+          r.goal = g;
+          r.xp += goalXp(g);
+          r.notes.push('Main goal complete: ' + g.name + '! +' + goalXp(g) + ' XP');
+        } else {
+          r.notes.push(byId[id].name + ' is solid!');
+        }
+      } else {
+        state.runs[id] = run;
+        if (!quiet) r.notes.push(run + ' of ' + SOLID_STREAK + ' in a row to make this topic solid.');
+      }
+    }
+    if (r.day) r.notes.push('Daily goal done! +' + DAILY_XP + ' XP');
+    return r;
+  }
 
   // Correct answers count toward clearing a topic; misses (re)add it at the top.
   function record(id, ok) {
@@ -968,27 +1055,38 @@
       note = 'Added to Needs practice.';
       fx = 'added';
     }
+    var goals = trackGoals(id, ok, !!note);
     save('hp.math', state);
     J.flip(list, renderNeeds);
     updateTopics();
+    renderGoals();
+    if (goals.xp) window.hpPlayer.gainXp(goals.xp);
+    if (goals.goal) J.goalDone($('m-goal-main'));
+    else if (goals.solid) J.goalStep($('m-goal-count'), fx === 'cleared');
+    if (goals.day) J.dayDone($('m-goal-day'));
     if (fx) {
       J.needs(fx, fx === 'cleared' ? rowWas : list.querySelector('[data-key="' + id + '"]'),
         { streak: e.streak, empty: !state.needs.length });
     }
-    return note;
+    return [note].concat(goals.notes).filter(Boolean).join(' ');
   }
 
   // ---------- Rendering ----------
   function pickTopic() {
     var pool = state.mode === 'all' ? TOPICS
       : state.mode === 'needs' ? state.needs.map(function (n) { return byId[n.id]; })
+      : state.mode === 'goal' ? unsolid(mainGoal())
       : [byId[state.mode]];
     var fresh = pool.filter(function (t) { return t !== lastTopic; });
     return pick(fresh.length ? fresh : pool);
   }
 
   function newQuestion(focus) {
-    if (state.mode === 'needs' && !state.needs.length) { state.mode = 'all'; save('hp.math', state); updateTopics(); }
+    if ((state.mode === 'needs' && !state.needs.length) || (state.mode === 'goal' && !mainGoal())) {
+      state.mode = 'all';
+      save('hp.math', state);
+      updateTopics();
+    }
     var topic = pickTopic();
     lastTopic = topic;
     current = topic.gen();
@@ -1019,7 +1117,7 @@
 
   function renderQuestion(focus) {
     var t = current.topic;
-    $('m-mode').textContent = (state.mode === 'all' ? 'Review all' : state.mode === 'needs' ? 'Needs practice' : t.group) + ' · ' + t.name;
+    $('m-mode').textContent = (state.mode === 'all' ? 'Review all' : state.mode === 'needs' ? 'Needs practice' : state.mode === 'goal' ? 'Main goal' : t.group) + ' · ' + t.name;
     $('m-question').textContent = current.text;
 
     var box = $('m-fields');
@@ -1244,6 +1342,60 @@
     $('m-weak').textContent = 'Practice these (' + state.needs.length + ')';
   }
 
+  var goalChips = {};
+  function buildGoals() {
+    GOALS.forEach(function (g) {
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip ghost';
+      chip.title = 'Make this your main goal';
+      chip.addEventListener('click', function () {
+        state.goal = g.name;
+        save('hp.math', state);
+        renderGoals();
+        if (state.mode === 'goal') setMode('goal');
+      });
+      $('m-goal-list').append(chip);
+      goalChips[g.name] = chip;
+    });
+  }
+
+  function renderGoals() {
+    rollDay();
+    var g = mainGoal();
+    var left = g ? unsolid(g) : [];
+    var done = g ? g.topics.length - left.length : 1, total = g ? g.topics.length : 1;
+    $('m-goal-total').textContent = state.solid.length + ' of ' + TOPICS.length + ' topics solid';
+    $('m-goal-name').textContent = g ? g.name : 'Every goal complete';
+    $('m-goal-reward').hidden = !g;
+    $('m-goal-reward').textContent = g ? '+' + goalXp(g) + ' XP' : '';
+    $('m-goal-count').textContent = g ? done + '/' + total : '';
+    $('m-goal-fill').style.width = Math.round(done / total * 100) + '%';
+    $('m-goal-fill').classList.toggle('complete', !g);
+    $('m-goal-go').hidden = !g;
+
+    var near = left.slice().sort(function (a, b) { return (state.runs[b.id] || 0) - (state.runs[a.id] || 0); })[0];
+    var run = near ? state.runs[near.id] || 0 : 0;
+    $('m-goal-next').textContent = !g ? 'You made all ' + TOPICS.length + ' topics solid.'
+      : run ? 'Closest: ' + near.name + ' ' + '●'.repeat(run) + '○'.repeat(SOLID_STREAK - run)
+      : 'Get a topic right ' + SOLID_STREAK + ' times in a row to make it solid.';
+
+    GOALS.forEach(function (x) {
+      var chip = goalChips[x.name], open = unsolid(x).length;
+      chip.textContent = open ? x.name + ' ' + (x.topics.length - open) + '/' + x.topics.length : x.name;
+      chip.disabled = !open;
+      chip.classList.toggle('solid', !open);
+      chip.classList.toggle('active', x === g);
+    });
+
+    var right = state.daily.right, streak = dayStreak();
+    $('m-day-text').textContent = right >= DAILY_GOAL ? '✓ Done, ' + right + ' right' : right + ' of ' + DAILY_GOAL + ' right';
+    $('m-day-fill').style.width = Math.min(right / DAILY_GOAL * 100, 100) + '%';
+    $('m-day-fill').classList.toggle('complete', right >= DAILY_GOAL);
+    $('m-day-streak').hidden = !streak;
+    $('m-day-streak').textContent = '🔥 ' + streak + '-day streak';
+  }
+
   var chips = {};
   function buildTopics() {
     var box = $('m-topic-list'), groups = {};
@@ -1274,7 +1426,9 @@
     TOPICS.forEach(function (t) {
       chips[t.id].classList.toggle('active', state.mode === t.id);
       chips[t.id].classList.toggle('weak', !!findNeed(t.id));
+      chips[t.id].classList.toggle('solid', isSolid(t.id));
     });
+    $('m-goal-go').classList.toggle('active', state.mode === 'goal');
     $('m-all').classList.toggle('active', state.mode === 'all');
     $('m-weak').classList.toggle('active', state.mode === 'needs');
   }
@@ -1306,6 +1460,9 @@
   $('m-idk').addEventListener('click', function () { submit(true); });
   $('m-all').addEventListener('click', function () { setMode('all'); });
   $('m-weak').addEventListener('click', function () { setMode('needs'); });
+  $('m-goal-go').addEventListener('click', function () { setMode('goal'); });
+  // The page can stay open past midnight
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) renderGoals(); });
   $('m-fields').addEventListener('focusin', function (e) { if (e.target.tagName === 'INPUT') lastInput = e.target; });
   $('m-keys').addEventListener('mousedown', function (e) { e.preventDefault(); }); // keep focus in the answer box
   $('m-keys').addEventListener('click', function (e) {
@@ -1323,6 +1480,8 @@
 
   // ---------- Init ----------
   buildTopics();
+  buildGoals();
+  renderGoals();
   renderNeeds();
   updateTopics();
   newQuestion(false);

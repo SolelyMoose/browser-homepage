@@ -14,6 +14,8 @@ No build step or dependencies. Everything is saved in your browser's `localStora
   - Pick one topic, or press **Review all** to get a mix of every type.
   - A wrong answer or **I don't know** adds the topic to **Needs practice**. Get it right 3 times in a row to clear it, or remove it with ×. **Practice these** quizzes you only on that list.
   - Answers can be typed like `3/4`, `1 1/2`, `2√3` or `2sqrt(3)`, `5pi/6`, `(x+2)(x-3)`, `x >= 4`, or `4.5 x 10^6`. If the value is right but the form isn't (for example an unsimplified fraction), it asks you to fix it and doesn't count it as wrong.
+  - **Main goals** give you something to work toward. Each of the 8 topic groups is a goal, and the panel at the top shows your current one. Get a topic right 3 times in a row (across sessions) to make it solid, and make every topic in a group solid to finish that goal and earn 20 XP per topic. Press a goal's name to switch to it, and **Work on this goal** to get questions only from its unfinished topics. Solid topics stay solid, even if you miss them later.
+  - **Today** is a daily target of 10 right answers, worth 30 XP. Reaching it on consecutive days builds a 🔥 day streak.
   - After each answer, the explanation plays one step at a time. Use **Show all** to skip ahead or **↻ Replay** to watch it again. This also applies to Study.
 - **Study: Geometry**: timed practice with a mastery score for each of 58 question types, such as surface area of cones or arc length.
   - Tick the question types you want, one at a time, by group, or with **Select all** / **Select none**. Then press **Start practicing** to get random questions from those types. You can change the ticks during a session.

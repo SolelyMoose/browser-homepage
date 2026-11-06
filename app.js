@@ -109,6 +109,9 @@
     }
   }
 
+  // Shared with math.js
+  window.hpPlayer = { gainXp: gainXp, todayKey: todayKey };
+
   function restartClass(el, cls) {
     el.classList.remove(cls);
     void el.offsetWidth; // restart the CSS animation

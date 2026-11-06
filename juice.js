@@ -715,7 +715,7 @@
 
   // ---------- Every other control ----------
   // These have their own sound, or get one from the result of pressing them
-  var OWN_SOUND = /^(m-(check|next|idk)|s-(check|next|idk|start|end|all|none))$/;
+  var OWN_SOUND = /^(m-(check|next|idk)|s-(check|next|idk|start|review|assess|end|all|none))$/;
 
   $('more').addEventListener('click', function (e) {
     var b = e.target.closest('button');

@@ -191,8 +191,14 @@
 
       <div class="s-idle" id="s-idle">
         <p class="hint" id="s-summary" role="status"></p>
-        <button type="button" id="s-start">Start practicing</button>
+        <div class="s-modes">
+          <button type="button" id="s-start">Start practicing</button>
+          <button type="button" class="secondary" id="s-review" title="Drill 3 ticked types, easiest first, starting with ones you last missed">Review</button>
+          <button type="button" class="secondary" id="s-assess" title="Test up to 20 ticked types with no feedback until the end">Assessment</button>
+        </div>
       </div>
+
+      <div class="s-report" id="s-report" hidden></div>
 
       <div class="s-session" id="s-session" hidden>
         <div class="s-status">

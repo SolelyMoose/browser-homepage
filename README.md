@@ -17,6 +17,8 @@ No build step or dependencies. Everything is saved in your browser's `localStora
   - After each answer, the explanation plays one step at a time. Use **Show all** to skip ahead or **↻ Replay** to watch it again. This also applies to Study.
 - **Study: Geometry**: timed practice with a mastery score for each of 58 question types, such as surface area of cones or arc length.
   - Tick the question types you want, one at a time, by group, or with **Select all** / **Select none**. Then press **Start practicing** to get random questions from those types. You can change the ticks during a session.
+  - **Review** works on just 3 ticked types that aren't mastered yet, easiest first (a shorter goal time counts as easier). Types you last got wrong are chosen first. Each type lasts until you get 3 right in a row, or moves on after 6 questions.
+  - **Assessment** tests you on up to 20 ticked types, one question each, taking turns between groups and favoring types you've practiced least. It shows nothing about your answers until the end, then gives a score by group and an explanation for each miss. Pressing **End** early reports what you answered. Answers count toward mastery, and the report goes away when you start another session.
   - Each question is timed. The timer pauses while the tab is hidden or the ⋯ section is closed.
   - A wrong answer or **I don't know** scores 0. A right answer scores 70%, plus up to 30% for speed: the full 30% at or under the type's goal time, falling to nothing at 3× the goal.
   - Mastery combines your last 10 attempts at that type, with recent ones counting most. Attempts you haven't made yet count as 0, so it takes 10 fast right answers to reach 100%. A right answer with no speed bonus tops out at 70%.

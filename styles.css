@@ -626,6 +626,24 @@ button.secondary { background: var(--accent-soft); color: var(--text); }
 .s-idle { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .s-idle[hidden], .s-session[hidden] { display: none; }
 .s-idle .hint { margin: 0; flex: 1 1 240px; }
+.s-modes { display: flex; flex-wrap: wrap; gap: 8px; }
+.s-report { margin-top: 16px; }
+.s-report h4 { margin: 16px 0 6px; font-size: 13px; }
+.s-report-groups { columns: 2 240px; column-gap: 28px; }
+.s-report-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  padding: 4px 0;
+  font-size: 13px;
+  break-inside: avoid;
+}
+.s-report-row .bar { grid-column: 1 / 3; height: 6px; flex: none; }
+.s-report details { padding: 6px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.s-report summary { cursor: pointer; font-weight: 600; }
+.s-report details p { margin: 6px 0 0; }
+.s-report .m-answer { font-weight: 600; }
+.s-report .m-note { font-size: 13px; color: var(--muted); }
 .s-status { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 8px; }
 .s-topic { flex: 1 1 200px; min-width: 0; font-size: 13px; color: var(--muted); }
 .s-timer { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }

@@ -1,6 +1,8 @@
 // Study: timed practice by question type. Every type has a mastery score built
 // from the accuracy and speed of its recent attempts. Questions come only from
 // the types the user has ticked. Answer checking is shared with math.js.
+// Three session modes: practice (random), review (a few types, easiest first)
+// and assess (one question per type, results at the end).
 (function () {
   'use strict';
 
@@ -623,6 +625,37 @@
   function secs(ms) { return ms < 60000 ? Math.round(ms / 1000) + 's' : clockText(ms); }
   function average(list) { return list.reduce(function (a, b) { return a + b; }, 0) / (list.length || 1); }
 
+  // ---------- Choosing types for review and assessment ----------
+  // A type's goal time stands in for its difficulty.
+  var REVIEW_TOPICS = 3, REVIEW_STREAK = 3, REVIEW_MAX = 6, ASSESS_MAX = 20;
+
+  function byEase(a, b) { return a.par - b.par; }
+  function lastMissed(t) { var list = attempts(t); return !!list.length && !list[0].ok; }
+
+  // Types not yet mastered. Ones whose last attempt was wrong take the spots
+  // first, so a review after an assessment works on what it found.
+  function reviewTopics() {
+    var open = selected().filter(function (t) { return mastery(t) < MASTERED; }).sort(byEase);
+    var missed = open.filter(lastMissed);
+    var rest = open.filter(function (t) { return !lastMissed(t); });
+    return missed.concat(rest).slice(0, REVIEW_TOPICS).sort(byEase);
+  }
+
+  // Takes turns between groups so a short test still covers them all, and within
+  // a group picks the least practiced type so repeat tests reach new ones.
+  function assessTopics() {
+    var byGroup = {}, picked = [], pool = selected();
+    shuffle(pool).sort(function (a, b) { return attempts(a).length - attempts(b).length; }).forEach(function (t) {
+      (byGroup[t.group] = byGroup[t.group] || []).push(t);
+    });
+    var lists = shuffle(Object.keys(byGroup)).map(function (g) { return byGroup[g]; });
+    for (var i = 0; picked.length < Math.min(ASSESS_MAX, pool.length); i++) {
+      var list = lists[i % lists.length];
+      if (list.length) picked.push(list.shift());
+    }
+    return picked.sort(byEase);
+  }
+
   // ---------- Topic list ----------
   var rows = {}, groups = {};
 
@@ -716,7 +749,7 @@
     $('s-overall-fill').style.width = overall + '%';
     var count = selected().length;
     $('s-count').textContent = count + ' of ' + TOPICS.length + ' selected';
-    $('s-start').disabled = !count;
+    $('s-start').disabled = $('s-review').disabled = $('s-assess').disabled = !count;
   }
 
   // ---------- Timer ----------
@@ -754,11 +787,28 @@
     $('s-hint').classList.toggle('error', !!isError);
   }
 
-  function nextQuestion(first) {
+  function scoreText(s) {
+    if (s.mode === 'assess') return 'Question ' + (s.at + 1) + ' of ' + s.queue.length;
+    if (s.mode === 'review') return 'Type ' + (s.at + 1) + ' of ' + s.queue.length + ' · ' + s.streak + ' in a row';
+    return s.right + '/' + s.total + ' right';
+  }
+
+  function randomTopic() {
     var pool = selected();
-    if (!pool.length) { endSession('Tick at least one question type to keep practicing.'); return; }
     var fresh = pool.filter(function (t) { return t !== lastTopic; });
-    var topic = pick(fresh.length ? fresh : pool);
+    return pick(fresh.length ? fresh : pool);
+  }
+
+  function nextQuestion(first) {
+    if (session.moveOn) {
+      session.moveOn = false;
+      session.at++;
+      session.asked = session.streak = 0;
+    }
+    if (session.queue && session.at >= session.queue.length) { endSession(); return; }
+    var topic = session.queue ? session.queue[session.at] : randomTopic();
+    if (!topic) { endSession('Tick at least one question type to keep practicing.'); return; }
+    if (session.queue) $('s-score').textContent = scoreText(session);
     lastTopic = topic;
     current = topic.gen();
     current.topic = topic;
@@ -809,8 +859,34 @@
     if (ok) { session.right++; session.ms += ms; }
     update();
 
-    inputs.forEach(function (inp) { inp.readOnly = true; });
     var answer = current.fields.map(function (f) { return (f.label ? f.label + ' ' : '') + f.show; }).join(',  ');
+
+    // An assessment gives no feedback until the end
+    if (session.mode === 'assess') {
+      session.log.push({
+        topic: t, ok: ok, text: current.text, answer: answer, why: current.why,
+        given: idk ? null : Array.prototype.map.call(inputs, function (inp) { return inp.value.trim(); }).join(', ')
+      });
+      session.at++;
+      nextQuestion(false);
+      return;
+    }
+
+    var moveNote = '';
+    if (session.mode === 'review') {
+      session.asked++;
+      session.streak = ok ? session.streak + 1 : 0;
+      var cleared = session.streak >= REVIEW_STREAK;
+      if (cleared) session.cleared++;
+      if (cleared || session.asked >= REVIEW_MAX) {
+        session.moveOn = true;
+        var following = session.queue[session.at + 1];
+        moveNote = ' ' + (cleared ? REVIEW_STREAK + ' in a row!' : 'Moving on for now.') +
+          (following ? ' Next up: ' + following.name + '.' : ' That was the last one.');
+      }
+    }
+
+    inputs.forEach(function (inp) { inp.readOnly = true; });
     var timing = ok ? 'Took ' + secs(ms) + ' (goal ' + t.par + 's). ' : '';
     var fb = $('s-feedback');
     fb.dataset.result = ok ? 'right' : idk ? 'idk' : 'wrong';
@@ -819,7 +895,7 @@
       ['m-verdict', ok ? '✓ Correct!' : idk ? 'Here\'s how it works.' : '✗ Not quite.'],
       ['m-answer', 'Answer: ' + answer],
       ['m-why', current.why],
-      ['m-note', timing + 'Mastery: ' + before + '% → ' + after + '%']
+      ['m-note', timing + 'Mastery: ' + before + '% → ' + after + '%.' + moveNote]
     ].forEach(function (row) {
       if (row[0] === 'm-why') { fb.append(J.meter(before, after), M.whyPlayer(row[1], $('s-next'))); return; }
       var p = document.createElement('p');
@@ -837,13 +913,21 @@
     J.answer({
       id: 's', card: $('s-session').closest('.card'), inputs: Array.prototype.slice.call(inputs), oks: oks,
       result: ok ? 'right' : idk ? 'idk' : 'wrong', feedback: fb, score: $('s-score'),
-      showScore: function () { $('s-score').textContent = s.right + '/' + s.total + ' right'; }
+      showScore: function () { $('s-score').textContent = scoreText(s); }
     });
     if (ok && ms <= t.par * 1000) J.fast($('s-timer'));
   }
 
-  function startSession() {
-    session = { right: 0, total: 0, ms: 0 };
+  // mode: 'practice', 'review' or 'assess'. queue is null for practice, which
+  // draws from the ticks live.
+  function startSession(mode) {
+    var queue = mode === 'review' ? reviewTopics() : mode === 'assess' ? assessTopics() : null;
+    if (queue && !queue.length) {
+      $('s-summary').textContent = 'Nothing to review: every ticked type is mastered.';
+      return;
+    }
+    session = { mode: mode, queue: queue, at: 0, streak: 0, asked: 0, cleared: 0, moveOn: false, log: [], right: 0, total: 0, ms: 0 };
+    $('s-report').hidden = true;
     $('s-idle').hidden = true;
     $('s-session').hidden = false;
     $('s-score').textContent = '';
@@ -862,10 +946,60 @@
     $('s-session').hidden = true;
     $('s-idle').hidden = false;
     var avg = s.right ? ', ' + secs(s.ms / s.right) + ' average per right answer' : '';
+    var label = s.mode === 'assess' ? 'Assessment' : s.mode === 'review' ? 'Review' : 'Last session';
+    var extra = s.mode === 'review' ? ' Cleared ' + s.cleared + ' of ' + s.queue.length + ' types.'
+      : s.mode === 'assess' && s.right < s.total ? ' Review starts with what you missed.' : '';
     $('s-summary').textContent = message || (s.total
-      ? 'Last session: ' + s.right + ' of ' + s.total + ' right' + avg + '.'
+      ? label + ': ' + s.right + ' of ' + s.total + ' right' + avg + '.' + extra
       : IDLE_TEXT);
+    if (s.mode === 'assess' && s.total) showReport(s.log);
     J.end(s, $('s-summary'));
+  }
+
+  function para(className, text) {
+    var p = document.createElement('p');
+    p.className = className;
+    p.textContent = text;
+    return p;
+  }
+
+  // log: one entry per answered assessment question
+  function showReport(log) {
+    var box = $('s-report');
+    box.textContent = '';
+    var table = document.createElement('div');
+    table.className = 's-report-groups';
+    Object.keys(groups).forEach(function (name) {
+      var asked = log.filter(function (e) { return e.topic.group === name; });
+      if (!asked.length) return;
+      var right = asked.filter(function (e) { return e.ok; }).length, b = bar();
+      var row = document.createElement('div'), label = document.createElement('span'), count = document.createElement('span');
+      row.className = 's-report-row';
+      label.textContent = name;
+      count.className = 'count';
+      count.textContent = right + '/' + asked.length;
+      b.fill.style.width = 100 * right / asked.length + '%';
+      b.fill.classList.toggle('complete', right === asked.length);
+      row.append(label, count, b.el);
+      table.append(row);
+    });
+    box.append(table);
+
+    var missed = log.filter(function (e) { return !e.ok; });
+    if (missed.length) {
+      var h = document.createElement('h4');
+      h.textContent = 'Missed (' + missed.length + ')';
+      box.append(h);
+    }
+    missed.forEach(function (e) {
+      var d = document.createElement('details'), s = document.createElement('summary');
+      s.textContent = e.topic.name;
+      d.append(s, para('', e.text),
+        para('m-note', e.given === null ? 'You said you didn\'t know.' : 'You answered: ' + e.given),
+        para('m-answer', 'Answer: ' + e.answer), para('m-why', e.why));
+      box.append(d);
+    });
+    box.hidden = false;
   }
 
   // Symbol keys insert into the last focused answer box
@@ -878,9 +1012,12 @@
   }
 
   // ---------- Events ----------
-  var IDLE_TEXT = 'Tick the question types you want, then start. Mastery goes up with right answers, and faster ones count for more.';
+  var IDLE_TEXT = 'Tick the question types you want, then start. Mastery goes up with right answers, and faster ones count for more. ' +
+    'Review drills ' + REVIEW_TOPICS + ' types, easiest first. Assessment tests you on up to ' + ASSESS_MAX + ' types and shows results at the end.';
 
-  $('s-start').addEventListener('click', startSession);
+  $('s-start').addEventListener('click', function () { startSession('practice'); });
+  $('s-review').addEventListener('click', function () { startSession('review'); });
+  $('s-assess').addEventListener('click', function () { startSession('assess'); });
   $('s-end').addEventListener('click', function () { endSession(); });
   $('s-form').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -904,7 +1041,10 @@
   $('more-toggle').addEventListener('click', syncClock);
 
   // ---------- Init ----------
-  window.hpStudy = { TOPICS: TOPICS, scoreAttempts: scoreAttempts, checkField: M.checkField };
+  window.hpStudy = {
+    TOPICS: TOPICS, scoreAttempts: scoreAttempts, checkField: M.checkField,
+    reviewTopics: reviewTopics, assessTopics: assessTopics
+  };
   buildList();
   update();
   $('s-summary').textContent = IDLE_TEXT;
